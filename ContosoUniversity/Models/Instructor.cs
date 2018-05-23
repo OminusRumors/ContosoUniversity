@@ -7,36 +7,33 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ContosoUniversity.Models
 {
-    public class Student
+    public class Instructor
     {
         public int ID { get; set; }
 
         [Required]
-        [StringLength(50)]
         [Display(Name = "Last name")]
-        [RegularExpression(@"^[A-Z]+[a-zA-Z""'\s-]*$")]
+        [StringLength(50)]
         public string LastName { get; set; }
 
-        [Column("FirstName")]
         [Required]
+        [Column("FirstName")]
         [Display(Name = "First name")]
-        [StringLength(50, ErrorMessage = "First name cannot be more than 50 characters.")]
+        [StringLength(50)]
         public string FirstMidName { get; set; }
 
         [DataType(DataType.Date)]
-        [Display(Name = "Enrollment date")]
         [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
-        public DateTime EnrollmentDate { get; set; }
+        [Display(Name = "Hire date")]
+        public DateTime HireDate { get; set; }
 
         [Display(Name = "Full name")]
         public string FullName
         {
-            get
-            {
-                return LastName + ", " + FirstMidName;
-            }
+            get { return LastName + ", " + FirstMidName; }
         }
 
-        public ICollection<Enrollment> Enrollments { get; set; }
+        public ICollection<CourseAssignment> CourseAssignments { get; set; }
+        public OfficeAssignment OfficeAssignment { get; set; }
     }
 }
