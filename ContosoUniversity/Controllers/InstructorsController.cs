@@ -105,7 +105,10 @@ namespace ContosoUniversity.Controllers
                 return NotFound();
             }
 
-            var instructor = await _context.Instructors.SingleOrDefaultAsync(m => m.ID == id);
+            var instructor = await _context.Instructors
+                .Include(c=>c.CourseAssignments)
+                .AsNoTracking()
+                .SingleOrDefaultAsync(m => m.ID == id);
             if (instructor == null)
             {
                 return NotFound();
