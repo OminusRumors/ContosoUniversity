@@ -66,6 +66,7 @@ namespace ContosoUniversity.Controllers
             }
 
             var instructor = await _context.Instructors
+                .AsNoTracking()
                 .SingleOrDefaultAsync(m => m.ID == id);
             if (instructor == null)
             {
@@ -80,7 +81,7 @@ namespace ContosoUniversity.Controllers
         {
             Instructor instructor = new Instructor();
             instructor.CourseAssignments = new List<CourseAssignment>();
-            PopulateAssignedCourseData(instructor);
+            PopulateAssignedCoursesData(instructor);
             return View();
         }
 
@@ -116,7 +117,7 @@ namespace ContosoUniversity.Controllers
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            PopulateAssignedCourseData(instructor);
+            PopulateAssignedCoursesData(instructor);
             return View(instructor);
         }
 
@@ -137,11 +138,11 @@ namespace ContosoUniversity.Controllers
             {
                 return NotFound();
             }
-            PopulateAssignedCourseData(instructor);
+            PopulateAssignedCoursesData(instructor);
             return View(instructor);
         }
 
-        private void PopulateAssignedCourseData(Instructor instructor)
+        private void PopulateAssignedCoursesData(Instructor instructor)
         {
             var allCourses = _context.Courses;
 
@@ -208,7 +209,7 @@ namespace ContosoUniversity.Controllers
                 return RedirectToAction(nameof(Index));
             }
             UpdateInstructorCourses(selectedCourses, instructorToUpdate);
-            PopulateAssignedCourseData(instructorToUpdate);
+            PopulateAssignedCoursesData(instructorToUpdate);
             return View(instructorToUpdate);
         }
 

@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using ContosoUniversity.Data;
 using ContosoUniversity.Models;
+using ContosoUniversity.Models.SchoolViewModels;
 
 namespace ContosoUniversity.Controllers
 {
@@ -21,7 +22,7 @@ namespace ContosoUniversity.Controllers
 
         // GET: Students
         public async Task<IActionResult> Index(
-            string sortOrder, 
+            string sortOrder,
             string searchString,
             string currentFilter,
             int? page)
@@ -92,6 +93,9 @@ namespace ContosoUniversity.Controllers
         // GET: Students/Create
         public IActionResult Create()
         {
+            Student student = new Student();
+            student.Enrollments = new List<Enrollment>();
+            PopulateAssigedCoursesData(student);
             return View();
         }
 
@@ -100,8 +104,24 @@ namespace ContosoUniversity.Controllers
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("LastName,FirstMidName,EnrollmentDate")] Student student)
+        public async Task<IActionResult> Create([Bind("LastName,FirstMidName,EnrollmentDate")] Student student,
+            string[] selectedCourses)
         {
+            if (selectedCourses != null)
+            {
+                student.Enrollments = new List<Enrollment>();
+
+                foreach (var c in selectedCourses)
+                {
+                    var courseToAdd = new Enrollment
+                    {
+                        CourseID = int.Parse(c),
+                        StudentID = student.ID
+                    };
+                    student.Enrollments.Add(courseToAdd);
+                }
+            }
+
             try
             {
                 if (ModelState.IsValid)
@@ -120,6 +140,27 @@ namespace ContosoUniversity.Controllers
 
         }
 
+        private void PopulateAssigedCoursesData(Student student)
+        {
+            var allCourses = _context.Courses;
+
+            var studentCourses = new HashSet<int>(student.Enrollments.Select(c => c.CourseID));
+
+            var viewModel = new List<AssignedCourseData>();
+
+            foreach (var c in allCourses)
+            {
+                viewModel.Add(new AssignedCourseData
+                {
+                    CourseID = c.CourseID,
+                    Title = c.Title,
+                    Assigned = studentCourses.Contains(c.CourseID)
+                });
+            }
+
+            ViewData["Courses"] = viewModel;
+        }
+
         // GET: Students/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
@@ -128,43 +169,87 @@ namespace ContosoUniversity.Controllers
                 return NotFound();
             }
 
-            var student = await _context.Students.SingleOrDefaultAsync(m => m.ID == id);
+            var student = await _context.Students
+                .Include(e => e.Enrollments).ThenInclude(e => e.Course)
+                .AsNoTracking()
+                .SingleOrDefaultAsync(m => m.ID == id);
             if (student == null)
             {
                 return NotFound();
             }
+            PopulateAssigedCoursesData(student);
             return View(student);
         }
 
         // POST: Students/Edit/5
         // To protect from overposting attacks, please enable the specific properties you want to bind to, for 
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost, ActionName("Edit")]
+        [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EditPost(int? id)
+        public async Task<IActionResult> Edit(int? id, string[] selectedCourses)
         {
             if (id == null)
             {
                 return NotFound();
             }
 
-            var studentToUpdate = await _context.Students.SingleOrDefaultAsync(s => s.ID == id);
+            var studentToUpdate = await _context.Students
+                .Include(e => e.Enrollments).ThenInclude(e => e.Course)
+                .SingleOrDefaultAsync(s => s.ID == id);
 
             if (await TryUpdateModelAsync<Student>(studentToUpdate, "",
                 s => s.FirstMidName, s => s.LastName, s => s.EnrollmentDate))
             {
+                UpdateStudentCourses(selectedCourses, studentToUpdate);
                 try
                 {
                     await _context.SaveChangesAsync();
-                    return RedirectToAction("Index");
                 }
                 catch (DbUpdateException)
                 {
                     ModelState.AddModelError("", "Unable to save changes. " + "Try again, and if the problem persists "
                     + "see your system admin.");
                 }
+                return RedirectToAction("Index");
             }
+            UpdateStudentCourses(selectedCourses, studentToUpdate);
+            PopulateAssigedCoursesData(studentToUpdate);
             return View(studentToUpdate);
+        }
+
+        private void UpdateStudentCourses(string[] selectedCourses, Student studentToUpdate)
+        {
+            if (selectedCourses == null)
+            {
+                studentToUpdate.Enrollments = new List<Enrollment>();
+                return;
+            }
+
+            var selectedCoursesHS = new HashSet<string>(selectedCourses);
+            var studentCourses = new HashSet<int>(studentToUpdate.Enrollments.Select(c => c.CourseID));
+
+            foreach (var c in _context.Courses)
+            {
+                if (selectedCoursesHS.Contains(c.CourseID.ToString()))
+                {
+                    if (!studentCourses.Contains(c.CourseID))
+                    {
+                        studentToUpdate.Enrollments.Add(new Enrollment
+                        {
+                            StudentID = studentToUpdate.ID,
+                            CourseID = c.CourseID
+                        });
+                    }
+                }
+                else
+                {
+                    if (studentCourses.Contains(c.CourseID))
+                    {
+                        Enrollment enrollmentToRemove = studentToUpdate.Enrollments.SingleOrDefault(e => e.CourseID == c.CourseID);
+                        _context.Remove(enrollmentToRemove);
+                    }
+                }
+            }
         }
 
         // GET: Students/Delete/5
@@ -197,7 +282,9 @@ namespace ContosoUniversity.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var student = await _context.Students.AsNoTracking().SingleOrDefaultAsync(m => m.ID == id);
+            var student = await _context.Students
+                .Include(e => e.Enrollments)
+                .SingleOrDefaultAsync(m => m.ID == id);
 
             if (student == null)
             {
