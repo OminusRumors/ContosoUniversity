@@ -13,7 +13,7 @@ namespace ContosoUniversity.Data
             context.Database.EnsureCreated();
 
             // Look for any students.
-            if (context.Students.Any())
+            if (context.Departments.Any())
             {
                 return;   // DB has been seeded
             }
@@ -68,16 +68,16 @@ namespace ContosoUniversity.Data
             {
                 new Department { Name = "English",     Budget = 350000,
                     StartDate = DateTime.Parse("2007-09-01"),
-                    InstructorID  = instructors.Single( i => i.LastName == "Abercrombie").ID },
+                    InstructorID  = instructors.Single( i => i.LastName == "Abercrombie").ID, },
                 new Department { Name = "Mathematics", Budget = 100000,
                     StartDate = DateTime.Parse("2007-09-01"),
-                    InstructorID  = instructors.Single( i => i.LastName == "Fakhouri").ID },
+                    InstructorID  = instructors.Single( i => i.LastName == "Fakhouri").ID  },
                 new Department { Name = "Engineering", Budget = 350000,
                     StartDate = DateTime.Parse("2007-09-01"),
-                    InstructorID  = instructors.Single( i => i.LastName == "Harui").ID },
+                    InstructorID  = instructors.Single( i => i.LastName == "Harui").ID  },
                 new Department { Name = "Economics",   Budget = 100000,
-                    StartDate = DateTime.Parse("2007-09-01"),
-                    InstructorID  = instructors.Single( i => i.LastName == "Kapoor").ID }
+                    StartDate = DateTime.Parse("2007-09-01"), 
+                    InstructorID  = instructors.Single( i => i.LastName == "Kapoor").ID  }
             };
 
             foreach (Department d in departments)
